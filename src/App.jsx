@@ -9,6 +9,8 @@ import Categories from './components/Categories'
 import Accounts from './components/Accounts'
 import Payments from './components/Payments'
 import Shipments from './components/Shipments'
+import Transactions from './components/Transactions'
+
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
             <NavLink to="/accounts" className="nav-link">Accounts</NavLink>
             <NavLink to="/payments" className="nav-link">Payments</NavLink>
             <NavLink to="/shipments" className="nav-link">Shipments</NavLink>
+            <NavLink to="/transactions" className="nav-link">Transactions</NavLink>
+
           </nav>
         </header>
         <main className="app-content">
@@ -40,6 +44,8 @@ function App() {
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/shipments" element={<Shipments />} />
+            <Route path="/transactions" element={<Transactions />} />
+
           </Routes>
         </main>
       </div>

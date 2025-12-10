@@ -116,6 +116,11 @@ class ApiService {
 
   getShipments() { return this.getAll('shipments') }
   createShipment(shipment) { return this.create('shipments', shipment) }
+
+  createTransaction(transaction) { 
+    return this.create('transactions', transaction) 
+  }
+
 }
 
 export default new ApiService()

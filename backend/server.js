@@ -13,6 +13,8 @@ import categoriesRouter from './routes/categories.js';
 import accountsRouter from './routes/accounts.js';
 import paymentsRouter from './routes/payments.js';
 import shipmentsRouter from './routes/shipments.js';
+import transactionsRouter from './routes/transactions.js';
+
 
 dotenv.config();
 
@@ -43,6 +45,8 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/shipments', shipmentsRouter);
+app.use('/api/transactions', transactionsRouter);
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
