@@ -13,6 +13,10 @@ import categoriesRouter from './routes/categories.js';
 import accountsRouter from './routes/accounts.js';
 import paymentsRouter from './routes/payments.js';
 import shipmentsRouter from './routes/shipments.js';
+import locationsRouter from './routes/locations.js';
+import orderLinesRouter from './routes/orderLines.js';
+import paymentCardsRouter from './routes/paymentCards.js';
+import shippersRouter from './routes/shippers.js';
 
 dotenv.config();
 
@@ -43,6 +47,10 @@ app.use('/api/categories', categoriesRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/shipments', shipmentsRouter);
+app.use('/api/locations', locationsRouter);
+app.use('/api/order-lines', orderLinesRouter);
+app.use('/api/payment-cards', paymentCardsRouter);
+app.use('/api/shippers', shippersRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
