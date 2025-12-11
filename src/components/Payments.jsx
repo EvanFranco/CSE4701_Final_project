@@ -5,6 +5,8 @@ import '../components/CommonStyles.css'
 export default function Payments() {
   const [payments, setPayments] = useState([])
   const [orders, setOrders] = useState([])
+  const [accounts, setAccounts] = useState([])
+  const [paymentCards, setPaymentCards] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     order_id: '',
@@ -18,6 +20,8 @@ export default function Payments() {
   useEffect(() => {
     loadPayments()
     api.getOrders().then(setOrders)
+    api.getAccounts().then(setAccounts)
+    api.getPaymentCards().then(setPaymentCards)
   }, [])
 
   const loadPayments = () => {
@@ -113,13 +117,21 @@ export default function Payments() {
                 <label>Order *</label>
                 <select
                   value={formData.order_id}
-                  onChange={(e) => setFormData({ ...formData, order_id: e.target.value })}
+                  onChange={(e) => {
+                    const selectedOrder = orders.find(o => o.order_id === parseInt(e.target.value))
+                    setFormData({ 
+                      ...formData, 
+                      order_id: e.target.value,
+                      // Pre-fill account_id if order has one
+                      account_id: selectedOrder?.account_id || formData.account_id
+                    })
+                  }}
                   required
                 >
                   <option value="">Select Order</option>
                   {orders.map(o => (
                     <option key={o.order_id} value={o.order_id}>
-                      Order #{o.order_id} - ${o.total_amount?.toFixed(2)}
+                      Order #{o.order_id} - ${o.total_amount?.toFixed(2)} {o.customer_name ? `(${o.customer_name})` : ''}
                     </option>
                   ))}
                 </select>
@@ -156,20 +168,32 @@ export default function Payments() {
                 />
               </div>
               <div className="form-group">
-                <label>Card ID</label>
-                <input
-                  type="number"
+                <label>Payment Card</label>
+                <select
                   value={formData.card_id}
                   onChange={(e) => setFormData({ ...formData, card_id: e.target.value })}
-                />
+                >
+                  <option value="">None</option>
+                  {paymentCards.map(c => (
+                    <option key={c.card_id} value={c.card_id}>
+                      {c.masked_number || 'Card'} ({c.card_type}) - {c.customer_name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
-                <label>Account ID</label>
-                <input
-                  type="number"
+                <label>Account</label>
+                <select
                   value={formData.account_id}
                   onChange={(e) => setFormData({ ...formData, account_id: e.target.value })}
-                />
+                >
+                  <option value="">None</option>
+                  {accounts.map(a => (
+                    <option key={a.account_id} value={a.account_id}>
+                      {a.account_number} (Balance: ${a.current_balance?.toFixed(2)})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary">

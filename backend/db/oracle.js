@@ -62,6 +62,19 @@ function convertKeysToLowercase(rows) {
 }
 
 /**
+ * Check if SQL is a DML operation (INSERT, UPDATE, DELETE)
+ * @param {string} sql - SQL query string
+ * @returns {boolean} True if DML operation
+ */
+function isDMLOperation(sql) {
+  const trimmed = sql.trim().toUpperCase();
+  return trimmed.startsWith('INSERT') || 
+         trimmed.startsWith('UPDATE') || 
+         trimmed.startsWith('DELETE') ||
+         trimmed.startsWith('MERGE');
+}
+
+/**
  * Execute a SQL query
  * @param {string} sql - SQL query string
  * @param {Array|Object} binds - Query parameters
@@ -70,21 +83,55 @@ function convertKeysToLowercase(rows) {
  */
 async function execute(sql, binds = [], options = {}) {
   let connection;
+  const isDML = isDMLOperation(sql);
+  
   try {
     connection = await pool.getConnection();
-    const result = await connection.execute(sql, binds, {
+    
+    // Always use autoCommit: true to ensure all DML operations are committed immediately
+    // This ensures data added through the frontend is immediately visible in SQL queries
+    const executeOptions = {
       outFormat: oracledb.OUT_FORMAT_OBJECT,
-      autoCommit: true,
+      autoCommit: true, // Always commit immediately for data consistency
       ...options
-    });
+    };
+    
+    // Override autoCommit if explicitly set to false in options (for transactions)
+    if (options.autoCommit === false) {
+      executeOptions.autoCommit = false;
+    }
+    
+    const result = await connection.execute(sql, binds, executeOptions);
+    
+    // With autoCommit: true, Oracle automatically commits after each statement
+    // For DML operations, this ensures data is immediately saved and visible
+    // If autoCommit is false, we must explicitly commit
+    if (isDML && !executeOptions.autoCommit) {
+      await connection.commit();
+    }
+    
+    // Log successful DML operations for debugging
+    if (isDML && process.env.NODE_ENV === 'development') {
+      const operation = sql.trim().toUpperCase().split(' ')[0];
+      console.log(`✅ ${operation} operation completed and committed`);
+    }
+    
     // Convert uppercase keys to lowercase
     if (result.rows) {
       result.rows = convertKeysToLowercase(result.rows);
     }
     return result.rows || result;
   } catch (err) {
+    // Rollback on error for DML operations (only if not auto-committed)
+    if (isDML && connection && !options.autoCommit) {
+      try {
+        await connection.rollback();
+      } catch (rollbackErr) {
+        // Ignore rollback errors if connection is already closed
+      }
+    }
     console.error('❌ Error executing query:', err);
-    console.error('SQL:', sql);
+    console.error('SQL:', sql.substring(0, 100) + (sql.length > 100 ? '...' : ''));
     console.error('Binds:', binds);
     throw err;
   } finally {

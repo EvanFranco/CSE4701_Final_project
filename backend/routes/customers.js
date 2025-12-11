@@ -52,7 +52,13 @@ router.post('/', async (req, res) => {
       }
     );
     
-    res.status(201).json({ customer_id: customerId, ...req.body });
+    // Fetch the created record from database
+    const createdCustomer = await executeOne(
+      'SELECT * FROM customer WHERE customer_id = :customer_id',
+      { customer_id: customerId }
+    );
+    
+    res.status(201).json(createdCustomer);
   } catch (err) {
     if (err.errorNum === 1) { // Unique constraint violation
       res.status(400).json({ error: 'Email already exists' });
@@ -85,7 +91,59 @@ router.put('/:id', async (req, res) => {
       }
     );
     
-    res.json({ customer_id: parseInt(req.params.id), ...req.body });
+    // Fetch the updated record from database
+    const updatedCustomer = await executeOne(
+      'SELECT * FROM customer WHERE customer_id = :customer_id',
+      { customer_id: parseInt(req.params.id) }
+    );
+    
+    res.json(updatedCustomer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get customer accounts
+router.get('/:id/accounts', async (req, res) => {
+  try {
+    const result = await execute(
+      'SELECT * FROM account WHERE customer_id = :customer_id ORDER BY account_id',
+      { customer_id: parseInt(req.params.id) }
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get customer orders
+router.get('/:id/orders', async (req, res) => {
+  try {
+    const result = await execute(
+      `SELECT o.*, 
+              a.account_number,
+              l.name as location_name
+       FROM order_header o
+       LEFT JOIN account a ON o.account_id = a.account_id
+       LEFT JOIN location l ON o.location_id = l.location_id
+       WHERE o.customer_id = :customer_id
+       ORDER BY o.order_id DESC`,
+      { customer_id: parseInt(req.params.id) }
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get customer payment cards
+router.get('/:id/payment-cards', async (req, res) => {
+  try {
+    const result = await execute(
+      'SELECT * FROM payment_card WHERE customer_id = :customer_id ORDER BY is_default DESC, card_id DESC',
+      { customer_id: parseInt(req.params.id) }
+    );
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

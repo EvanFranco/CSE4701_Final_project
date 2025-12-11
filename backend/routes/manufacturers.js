@@ -46,7 +46,13 @@ router.post('/', async (req, res) => {
       }
     );
     
-    res.status(201).json({ manufacturer_id: manufacturerId, ...req.body });
+    // Fetch the created record from database
+    const createdManufacturer = await executeOne(
+      'SELECT * FROM manufacturer WHERE manufacturer_id = :manufacturer_id',
+      { manufacturer_id: manufacturerId }
+    );
+    
+    res.status(201).json(createdManufacturer);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -68,7 +74,33 @@ router.put('/:id', async (req, res) => {
       }
     );
     
-    res.json({ manufacturer_id: parseInt(req.params.id), ...req.body });
+    // Fetch the updated record from database
+    const updatedManufacturer = await executeOne(
+      'SELECT * FROM manufacturer WHERE manufacturer_id = :manufacturer_id',
+      { manufacturer_id: parseInt(req.params.id) }
+    );
+    
+    res.json(updatedManufacturer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get manufacturer products
+router.get('/:id/products', async (req, res) => {
+  try {
+    const result = await execute(
+      `SELECT p.*, 
+              COUNT(DISTINCT ol.order_id) as order_count,
+              SUM(ol.quantity) as total_quantity_sold
+       FROM product p
+       LEFT JOIN order_line ol ON p.product_id = ol.product_id
+       WHERE p.manufacturer_id = :manufacturer_id
+       GROUP BY p.product_id, p.sku, p.name, p.description, p.unit_price, p.is_bundle, p.manufacturer_id
+       ORDER BY p.product_id`,
+      { manufacturer_id: parseInt(req.params.id) }
+    );
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

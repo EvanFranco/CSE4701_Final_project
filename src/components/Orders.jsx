@@ -5,6 +5,8 @@ import '../components/CommonStyles.css'
 export default function Orders() {
   const [orders, setOrders] = useState([])
   const [customers, setCustomers] = useState([])
+  const [accounts, setAccounts] = useState([])
+  const [locations, setLocations] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingOrder, setEditingOrder] = useState(null)
   const [formData, setFormData] = useState({
@@ -20,6 +22,8 @@ export default function Orders() {
   useEffect(() => {
     loadOrders()
     api.getCustomers().then(setCustomers)
+    api.getAccounts().then(setAccounts)
+    api.getLocations().then(setLocations)
   }, [])
 
   const loadOrders = () => {
@@ -197,20 +201,32 @@ export default function Orders() {
                 </select>
               </div>
               <div className="form-group">
-                <label>Account ID</label>
-                <input
-                  type="number"
+                <label>Account</label>
+                <select
                   value={formData.account_id}
                   onChange={(e) => setFormData({ ...formData, account_id: e.target.value })}
-                />
+                >
+                  <option value="">None</option>
+                  {accounts.map(a => (
+                    <option key={a.account_id} value={a.account_id}>
+                      {a.account_number} (Customer: {a.customer_id}, Balance: ${a.current_balance?.toFixed(2)})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
-                <label>Location ID</label>
-                <input
-                  type="number"
+                <label>Location</label>
+                <select
                   value={formData.location_id}
                   onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
-                />
+                >
+                  <option value="">None</option>
+                  {locations.map(l => (
+                    <option key={l.location_id} value={l.location_id}>
+                      {l.name} ({l.location_type})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label>Total Amount</label>

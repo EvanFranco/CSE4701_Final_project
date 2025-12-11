@@ -1,227 +1,227 @@
 -- =====================================================
 -- Electronics Vendor Management System
 -- Database Schema Creation Script
--- Oracle SQL
+-- MySQL Version
 -- =====================================================
 
 -- Drop tables in reverse dependency order (if needed for clean install)
 -- Uncomment the following section if you need to drop existing tables
 /*
-DROP TABLE shipment CASCADE CONSTRAINTS;
-DROP TABLE payment CASCADE CONSTRAINTS;
-DROP TABLE payment_card CASCADE CONSTRAINTS;
-DROP TABLE order_line CASCADE CONSTRAINTS;
-DROP TABLE order_header CASCADE CONSTRAINTS;
-DROP TABLE reorder CASCADE CONSTRAINTS;
-DROP TABLE inventory CASCADE CONSTRAINTS;
-DROP TABLE bundle_component CASCADE CONSTRAINTS;
-DROP TABLE product_category CASCADE CONSTRAINTS;
-DROP TABLE shipper CASCADE CONSTRAINTS;
-DROP TABLE account CASCADE CONSTRAINTS;
-DROP TABLE product CASCADE CONSTRAINTS;
-DROP TABLE category CASCADE CONSTRAINTS;
-DROP TABLE location CASCADE CONSTRAINTS;
-DROP TABLE customer CASCADE CONSTRAINTS;
-DROP TABLE manufacturer CASCADE CONSTRAINTS;
+DROP TABLE IF EXISTS shipment;
+DROP TABLE IF EXISTS payment;
+DROP TABLE IF EXISTS payment_card;
+DROP TABLE IF EXISTS order_line;
+DROP TABLE IF EXISTS order_header;
+DROP TABLE IF EXISTS reorder;
+DROP TABLE IF EXISTS inventory;
+DROP TABLE IF EXISTS bundle_component;
+DROP TABLE IF EXISTS product_category;
+DROP TABLE IF EXISTS shipper;
+DROP TABLE IF EXISTS account;
+DROP TABLE IF EXISTS product;
+DROP TABLE IF EXISTS category;
+DROP TABLE IF EXISTS location;
+DROP TABLE IF EXISTS customer;
+DROP TABLE IF EXISTS manufacturer;
 */
 
 -- =====================================================
 -- Table: manufacturer
 -- =====================================================
 CREATE TABLE manufacturer (
-    manufacturer_id NUMBER(10) PRIMARY KEY,
-    name VARCHAR2(100) NOT NULL,
-    country VARCHAR2(50)
-);
+    manufacturer_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    country VARCHAR(50)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: customer
 -- =====================================================
 CREATE TABLE customer (
-    customer_id NUMBER(10) PRIMARY KEY,
-    first_name VARCHAR2(50),
-    last_name VARCHAR2(50),
-    email VARCHAR2(100) UNIQUE,
-    phone VARCHAR2(20),
-    billing_address VARCHAR2(200),
-    shipping_address VARCHAR2(200),
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    email VARCHAR(100) UNIQUE,
+    phone VARCHAR(20),
+    billing_address VARCHAR(200),
+    shipping_address VARCHAR(200),
     contract_flag CHAR(1) CHECK (contract_flag IN ('Y','N'))
-);
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: category
 -- =====================================================
 CREATE TABLE category (
-    category_id NUMBER(10) PRIMARY KEY,
-    name VARCHAR2(100) NOT NULL,
-    category_type VARCHAR2(20),
-    parent_category_id NUMBER(10)
-);
+    category_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    category_type VARCHAR(20),
+    parent_category_id INT
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: location
 -- =====================================================
 CREATE TABLE location (
-    location_id NUMBER(10) PRIMARY KEY,
-    name VARCHAR2(100) NOT NULL,
-    location_type VARCHAR2(20) NOT NULL,
-    address VARCHAR2(200),
-    city VARCHAR2(50),
-    state VARCHAR2(20),
-    zip VARCHAR2(10),
-    region VARCHAR2(30),
+    location_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    location_type VARCHAR(20) NOT NULL,
+    address VARCHAR(200),
+    city VARCHAR(50),
+    state VARCHAR(20),
+    zip VARCHAR(10),
+    region VARCHAR(30),
     CONSTRAINT chk_location_type CHECK (location_type IN ('STORE','WAREHOUSE'))
-);
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: product
 -- =====================================================
 CREATE TABLE product (
-    product_id NUMBER(10) PRIMARY KEY,
-    sku VARCHAR2(50) UNIQUE,
-    name VARCHAR2(100) NOT NULL,
-    description VARCHAR2(4000),
-    unit_price NUMBER(10,2) NOT NULL,
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    sku VARCHAR(50) UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    unit_price DECIMAL(10,2) NOT NULL,
     is_bundle CHAR(1) DEFAULT 'N' CHECK (is_bundle IN ('Y','N')),
-    manufacturer_id NUMBER(10)
-);
+    manufacturer_id INT
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: account
 -- =====================================================
 CREATE TABLE account (
-    account_id NUMBER(10) PRIMARY KEY,
-    customer_id NUMBER(10) NOT NULL,
-    account_number VARCHAR2(30) UNIQUE NOT NULL,
-    credit_limit NUMBER(10,2),
-    current_balance NUMBER(10,2),
+    account_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    account_number VARCHAR(30) UNIQUE NOT NULL,
+    credit_limit DECIMAL(10,2),
+    current_balance DECIMAL(10,2),
     opened_date DATE,
-    status VARCHAR2(20)
-);
+    status VARCHAR(20)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: product_category
 -- =====================================================
 CREATE TABLE product_category (
-    product_id NUMBER(10) NOT NULL,
-    category_id NUMBER(10) NOT NULL,
-    CONSTRAINT pk_product_category PRIMARY KEY (product_id, category_id)
-);
+    product_id INT NOT NULL,
+    category_id INT NOT NULL,
+    PRIMARY KEY (product_id, category_id)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: bundle_component
 -- =====================================================
 CREATE TABLE bundle_component (
-    bundle_product_id NUMBER(10) NOT NULL,
-    component_product_id NUMBER(10) NOT NULL,
-    quantity NUMBER(10) NOT NULL,
-    CONSTRAINT pk_bundle_component PRIMARY KEY (bundle_product_id, component_product_id)
-);
+    bundle_product_id INT NOT NULL,
+    component_product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    PRIMARY KEY (bundle_product_id, component_product_id)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: inventory
 -- =====================================================
 CREATE TABLE inventory (
-    location_id NUMBER(10) NOT NULL,
-    product_id NUMBER(10) NOT NULL,
-    quantity_on_hand NUMBER(10) DEFAULT 0,
-    reorder_level NUMBER(10),
-    reorder_quantity NUMBER(10),
-    CONSTRAINT pk_inventory PRIMARY KEY (location_id, product_id)
-);
+    location_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity_on_hand INT DEFAULT 0,
+    reorder_level INT,
+    reorder_quantity INT,
+    PRIMARY KEY (location_id, product_id)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: reorder
 -- =====================================================
 CREATE TABLE reorder (
-    reorder_id NUMBER(10) PRIMARY KEY,
-    product_id NUMBER(10) NOT NULL,
-    location_id NUMBER(10) NOT NULL,
-    manufacturer_id NUMBER(10) NOT NULL,
+    reorder_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    location_id INT NOT NULL,
+    manufacturer_id INT NOT NULL,
     order_date DATE NOT NULL,
     expected_date DATE,
     received_date DATE,
-    quantity NUMBER(10) NOT NULL,
-    status VARCHAR2(20)
-);
+    quantity INT NOT NULL,
+    status VARCHAR(20)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: order_header
 -- =====================================================
 CREATE TABLE order_header (
-    order_id NUMBER(10) PRIMARY KEY,
-    order_datetime DATE NOT NULL,
-    channel VARCHAR2(20) NOT NULL,
-    customer_id NUMBER(10) NOT NULL,
-    account_id NUMBER(10),
-    location_id NUMBER(10),
-    total_amount NUMBER(10,2),
-    status VARCHAR2(20),
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_datetime DATETIME NOT NULL,
+    channel VARCHAR(20) NOT NULL,
+    customer_id INT NOT NULL,
+    account_id INT,
+    location_id INT,
+    total_amount DECIMAL(10,2),
+    status VARCHAR(20),
     CONSTRAINT chk_order_channel CHECK (channel IN ('ONLINE','INSTORE'))
-);
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: order_line
 -- =====================================================
 CREATE TABLE order_line (
-    order_id NUMBER(10) NOT NULL,
-    line_no NUMBER(4) NOT NULL,
-    product_id NUMBER(10) NOT NULL,
-    quantity NUMBER(10) NOT NULL,
-    unit_price NUMBER(10,2) NOT NULL,
-    discount_amount NUMBER(10,2),
-    CONSTRAINT pk_order_line PRIMARY KEY (order_id, line_no)
-);
+    order_id INT NOT NULL,
+    line_no INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2),
+    PRIMARY KEY (order_id, line_no)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: payment_card
 -- =====================================================
 CREATE TABLE payment_card (
-    card_id NUMBER(10) PRIMARY KEY,
-    customer_id NUMBER(10) NOT NULL,
-    card_type VARCHAR2(20),
-    masked_number VARCHAR2(20),
-    expiry_month NUMBER(2),
-    expiry_year NUMBER(4),
-    billing_address VARCHAR2(200),
+    card_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    card_type VARCHAR(20),
+    masked_number VARCHAR(20),
+    expiry_month INT,
+    expiry_year INT,
+    billing_address VARCHAR(200),
     is_default CHAR(1) CHECK (is_default IN ('Y','N'))
-);
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: payment
 -- =====================================================
 CREATE TABLE payment (
-    payment_id NUMBER(10) PRIMARY KEY,
-    order_id NUMBER(10) NOT NULL,
-    payment_method VARCHAR2(20) NOT NULL,
-    amount NUMBER(10,2) NOT NULL,
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    payment_method VARCHAR(20) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
     payment_date DATE NOT NULL,
-    card_id NUMBER(10),
-    account_id NUMBER(10)
-);
+    card_id INT,
+    account_id INT
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: shipper
 -- =====================================================
 CREATE TABLE shipper (
-    shipper_id NUMBER(10) PRIMARY KEY,
-    name VARCHAR2(100) NOT NULL,
-    phone VARCHAR2(20),
-    website VARCHAR2(200)
-);
+    shipper_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    website VARCHAR(200)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Table: shipment
 -- =====================================================
 CREATE TABLE shipment (
-    shipment_id NUMBER(10) PRIMARY KEY,
-    order_id NUMBER(10) NOT NULL,
-    shipper_id NUMBER(10) NOT NULL,
-    tracking_number VARCHAR2(50) NOT NULL,
+    shipment_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    shipper_id INT NOT NULL,
+    tracking_number VARCHAR(50) NOT NULL,
     ship_date DATE,
     delivery_date DATE,
-    shipping_address VARCHAR2(200)
-);
+    shipping_address VARCHAR(200)
+) ENGINE=InnoDB;
 
 -- =====================================================
 -- Foreign Key Constraints
@@ -343,24 +343,7 @@ ADD CONSTRAINT fk_shipment_shipper
 FOREIGN KEY (shipper_id) REFERENCES shipper(shipper_id);
 
 -- =====================================================
--- Sequences for Primary Keys (Optional but Recommended)
--- =====================================================
-
-CREATE SEQUENCE seq_manufacturer_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_customer_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_category_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_location_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_product_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_account_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_reorder_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_order_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_card_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_payment_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_shipper_id START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE seq_shipment_id START WITH 1 INCREMENT BY 1;
-
--- =====================================================
--- Indexes for Performance (Additional indexes beyond PKs)
+-- Indexes for Performance
 -- =====================================================
 
 -- Indexes on foreign keys for better join performance
@@ -397,27 +380,8 @@ CREATE INDEX idx_order_status ON order_header(status);
 CREATE INDEX idx_shipment_tracking ON shipment(tracking_number);
 
 -- =====================================================
--- Comments on Tables (Documentation)
--- =====================================================
-
-COMMENT ON TABLE manufacturer IS 'Electronics manufacturers (Sony, Apple, HP, Gateway, etc.)';
-COMMENT ON TABLE customer IS 'Customer information with contract flag for monthly billing vs one-time purchases';
-COMMENT ON TABLE account IS 'Contract customer accounts with credit limits for monthly billing';
-COMMENT ON TABLE product IS 'Electronics product catalog with bundle flag for packaged products';
-COMMENT ON TABLE category IS 'Product categories with hierarchy (by type, manufacturer, or other groupings)';
-COMMENT ON TABLE product_category IS 'Product-category relationships (supports overlapping categories)';
-COMMENT ON TABLE bundle_component IS 'Bundle product components (e.g., PC + monitor + printer)';
-COMMENT ON TABLE location IS 'Store and warehouse locations (STORE or WAREHOUSE type)';
-COMMENT ON TABLE inventory IS 'Inventory levels by location with reorder levels and quantities';
-COMMENT ON TABLE reorder IS 'Reorder requests to manufacturers when inventory is low';
-COMMENT ON TABLE order_header IS 'Order information with channel (ONLINE/INSTORE) and status';
-COMMENT ON TABLE order_line IS 'Order line items with products, quantities, and pricing';
-COMMENT ON TABLE payment_card IS 'Customer payment cards (stored for online customers, not in-store)';
-COMMENT ON TABLE payment IS 'Payment transactions (account billing or card payments)';
-COMMENT ON TABLE shipper IS 'Shipping companies for online order fulfillment';
-COMMENT ON TABLE shipment IS 'Shipment tracking with tracking numbers for customer inquiries';
-
--- =====================================================
 -- End of Schema Creation Script
 -- =====================================================
+
+
 

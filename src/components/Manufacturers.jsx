@@ -4,6 +4,8 @@ import '../components/CommonStyles.css'
 
 export default function Manufacturers() {
   const [manufacturers, setManufacturers] = useState([])
+  const [manufacturerProducts, setManufacturerProducts] = useState({})
+  const [expandedManufacturers, setExpandedManufacturers] = useState(new Set())
   const [showForm, setShowForm] = useState(false)
   const [editingManufacturer, setEditingManufacturer] = useState(null)
   const [formData, setFormData] = useState({
@@ -15,8 +17,30 @@ export default function Manufacturers() {
     loadManufacturers()
   }, [])
 
-  const loadManufacturers = () => {
-    api.getManufacturers().then(setManufacturers)
+  const loadManufacturers = async () => {
+    const data = await api.getManufacturers()
+    setManufacturers(data)
+    // Load products for each manufacturer
+    const productsMap = {}
+    for (const mfg of data) {
+      try {
+        const products = await api.request(`/manufacturers/${mfg.manufacturer_id}/products`)
+        productsMap[mfg.manufacturer_id] = products || []
+      } catch (err) {
+        productsMap[mfg.manufacturer_id] = []
+      }
+    }
+    setManufacturerProducts(productsMap)
+  }
+
+  const toggleExpand = (manufacturerId) => {
+    const newExpanded = new Set(expandedManufacturers)
+    if (newExpanded.has(manufacturerId)) {
+      newExpanded.delete(manufacturerId)
+    } else {
+      newExpanded.add(manufacturerId)
+    }
+    setExpandedManufacturers(newExpanded)
   }
 
   const handleSubmit = (e) => {
@@ -64,7 +88,7 @@ export default function Manufacturers() {
     <div>
       <div className="page-header">
         <h2>Manufacturers</h2>
-        <p>Manage electronics manufacturers such as Sony, Apple, HP, Gateway, and others. Track manufacturer information for product sourcing and reorder management.</p>
+        <p>Manage electronics manufacturers such as Sony, Apple, HP, Gateway, and others. Click on a manufacturer to see their products.</p>
       </div>
 
       <div className="table-container">
@@ -82,28 +106,96 @@ export default function Manufacturers() {
           <table>
             <thead>
               <tr>
+                <th style={{ width: '30px' }}></th>
                 <th>ID</th>
                 <th>Name</th>
                 <th>Country</th>
+                <th>Products</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {manufacturers.map(manufacturer => (
-                <tr key={manufacturer.manufacturer_id}>
-                  <td>{manufacturer.manufacturer_id}</td>
-                  <td>{manufacturer.name}</td>
-                  <td>{manufacturer.country || 'N/A'}</td>
-                  <td>
-                    <button className="btn btn-secondary" onClick={() => handleEdit(manufacturer)} style={{ marginRight: '0.5rem' }}>
-                      Edit
-                    </button>
-                    <button className="btn btn-danger" onClick={() => handleDelete(manufacturer.manufacturer_id)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {manufacturers.map(manufacturer => {
+                const isExpanded = expandedManufacturers.has(manufacturer.manufacturer_id)
+                const products = manufacturerProducts[manufacturer.manufacturer_id] || []
+                
+                return (
+                  <>
+                    <tr key={manufacturer.manufacturer_id} style={{ cursor: 'pointer' }} onClick={() => toggleExpand(manufacturer.manufacturer_id)}>
+                      <td>
+                        <span style={{ 
+                          display: 'inline-block',
+                          width: '20px',
+                          textAlign: 'center',
+                          fontWeight: 'bold'
+                        }}>
+                          {products.length > 0 ? (isExpanded ? '▼' : '▶') : ''}
+                        </span>
+                      </td>
+                      <td>{manufacturer.manufacturer_id}</td>
+                      <td><strong>{manufacturer.name}</strong></td>
+                      <td>{manufacturer.country || 'N/A'}</td>
+                      <td>
+                        <span className="badge badge-info">
+                          {products.length} product{products.length !== 1 ? 's' : ''}
+                        </span>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <button className="btn btn-secondary" onClick={() => handleEdit(manufacturer)} style={{ marginRight: '0.5rem' }}>
+                          Edit
+                        </button>
+                        <button className="btn btn-danger" onClick={() => handleDelete(manufacturer.manufacturer_id)}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && products.length > 0 && (
+                      <tr>
+                        <td colSpan="6" style={{ padding: '0', backgroundColor: '#f8f9fa' }}>
+                          <div style={{ padding: '15px 40px', borderTop: '1px solid #dee2e6' }}>
+                            <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#6c757d' }}>
+                              Products by {manufacturer.name}:
+                            </h4>
+                            <table style={{ width: '100%', fontSize: '13px' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: '#e9ecef' }}>
+                                  <th style={{ padding: '8px', textAlign: 'left' }}>Product ID</th>
+                                  <th style={{ padding: '8px', textAlign: 'left' }}>SKU</th>
+                                  <th style={{ padding: '8px', textAlign: 'left' }}>Name</th>
+                                  <th style={{ padding: '8px', textAlign: 'right' }}>Price</th>
+                                  <th style={{ padding: '8px', textAlign: 'center' }}>Orders</th>
+                                  <th style={{ padding: '8px', textAlign: 'right' }}>Qty Sold</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {products.map(product => (
+                                  <tr key={product.product_id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                                    <td style={{ padding: '8px' }}>{product.product_id}</td>
+                                    <td style={{ padding: '8px' }}>{product.sku || 'N/A'}</td>
+                                    <td style={{ padding: '8px' }}>{product.name}</td>
+                                    <td style={{ padding: '8px', textAlign: 'right' }}>${product.unit_price?.toFixed(2)}</td>
+                                    <td style={{ padding: '8px', textAlign: 'center' }}>{product.order_count || 0}</td>
+                                    <td style={{ padding: '8px', textAlign: 'right' }}>{product.total_quantity_sold || 0}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {isExpanded && products.length === 0 && (
+                      <tr>
+                        <td colSpan="6" style={{ padding: '15px 40px', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6' }}>
+                          <p style={{ margin: '0', color: '#6c757d', fontStyle: 'italic' }}>
+                            No products found for this manufacturer.
+                          </p>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                )
+              })}
             </tbody>
           </table>
         )}
