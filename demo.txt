@@ -1,0 +1,281 @@
+─────────────────────────────────────────────────────────────┐
+│ STEP 1: Create Customer │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/customers │
+│ - first_name, last_name, email (unique), phone │
+│ - billing_address, shipping_address │
+│ - contract_flag: 'Y' (contract) or 'N' (one-time) │
+│ │
+│ Backend: │
+│ 1. Validate email uniqueness │
+│ 2. Generate customer_id from seq_customer_id │
+│ 3. INSERT INTO customer table │
+│ 4. Return created customer record │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2: Create Account (if contract_flag = 'Y') │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/accounts │
+│ - customer_id (FK to customer) │
+│ - account_number (unique business identifier) │
+│ - credit_limit (optional, for credit control) │
+│ - current_balance (default: 0) │
+│ - opened_date, status ('ACTIVE', 'CLOSED', 'SUSPENDED') │
+│ │
+│ Backend: │
+│ 1. Validate customer_id exists │
+│ 2. Validate account_number uniqueness │
+│ 3. Generate account_id from seq_account_id │
+│ 4. INSERT INTO account table │
+│ 5. Return created account record │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 3: Add Payment Card (if contract_flag = 'N') │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/payment-cards │
+│ - customer_id (FK to customer) │
+│ - card_type, masked_number, expiry_month, expiry_year │
+│ - billing_address, is_default ('Y' or 'N') │
+│ │
+│ Backend: │
+│ 1. Validate customer_id exists │
+│ 2. If is_default = 'Y', unset other default cards │
+│ 3. Generate card_id from seq_card_id │
+│ 4. INSERT INTO payment_card table │
+│ 5. Return created card record │
+└─────────────────────────────────────────────────────────────┘
+### 2. Product & Inventory Setup
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 1: Create Manufacturer │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/manufacturers │
+│ - name, country │
+│ │
+│ Backend: │
+│ 1. Generate manufacturer_id from seq_manufacturer_id │
+│ 2. INSERT INTO manufacturer table │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2: Create Product │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/products │
+│ - sku, name, description, unit_price │
+│ - manufacturer_id (FK, optional) │
+│ - is_bundle ('Y' or 'N') │
+│ │
+│ Backend: │
+│ 1. Validate manufacturer_id if provided │
+│ 2. Generate product_id from seq_product_id │
+│ 3. INSERT INTO product table │
+│ 4. Return created product with manufacturer details │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 3: Create Location │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/locations │
+│ - name, location_type ('STORE' or 'WAREHOUSE') │
+│ - address, city, state, zip, region │
+│ │
+│ Backend: │
+│ 1. Validate location_type │
+│ 2. Generate location_id from seq_location_id │
+│ 3. INSERT INTO location table │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 4: Create Inventory │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/inventory │
+│ - location_id (FK to location) │
+│ - product_id (FK to product) │
+│ - quantity_on_hand, reorder_level, reorder_quantity │
+│ │
+│ Backend: │
+│ 1. Validate location_id and product_id exist │
+│ 2. Check for duplicate (location_id, product_id) │
+│ 3. INSERT INTO inventory table │
+│ 4. Return created inventory with product/location names │
+└─────────────────────────────────────────────────────────────┘
+### 3. Order Processing Flow
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 1: Create Order Header │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/orders │
+│ - order_datetime, channel ('ONLINE' or 'INSTORE') │
+│ - customer_id (FK, required) │
+│ - account_id (FK, optional - for contract customers) │
+│ - location_id (FK, optional - for in-store orders) │
+│ - total_amount (optional - auto-calculated from lines) │
+│ - status ('PENDING', 'COMPLETED', 'CANCELLED', 'SHIPPED')│
+│ │
+│ Backend Processing: │
+│ 1. Validate customer_id exists │
+│ 2. Validate account_id if provided │
+│ 3. Validate location_id if provided │
+│ 4. Generate order_id from seq_order_id │
+│ 5. INSERT INTO order_header │
+│ 6. IF account_id AND total_amount > 0: │
+│ a. Get account.current_balance and credit_limit │
+│ b. Calculate: newBalance = current_balance + total │
+│ c. IF credit_limit exists AND newBalance > limit: │
+│ - DELETE order (rollback) │
+│ - Return 400 error │
+│ d. ELSE: UPDATE account.current_balance = newBalance │
+│ 7. Return created order with customer/account/location │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2: Add Order Lines │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/order-lines │
+│ - order_id (FK to order_header) │
+│ - product_id (FK to product) │
+│ - quantity, unit_price, discount_amount (optional) │
+│ │
+│ Backend Processing: │
+│ 1. Validate order_id and product_id exist │
+│ 2. Auto-generate line_no (MAX(line_no) + 1) │
+│ 3. INSERT INTO order_line │
+│ 4. Recalculate order total: │
+│ SELECT SUM(quantity * unit_price - discount_amount) │
+│ FROM order_line WHERE order_id = ? │
+│ 5. UPDATE order_header.total_amount = calculated_total │
+│ 6. IF order.account_id exists: │
+│ a. Calculate lineTotal = qty * price - discount │
+│ b. Get old order.total_amount │
+│ c. Calculate difference = newTotal - oldTotal │
+│ d. Update account: │
+│ newBalance = current_balance + difference │
+│ e. IF credit_limit AND newBalance > limit: │
+│ - Rollback order_line insert │
+│ - Return 400 error │
+│ f. ELSE: UPDATE account.current_balance │
+│ 7. Return created order line with product details │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 3: Process Payment │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/payments │
+│ - order_id (FK to order_header, required) │
+│ - payment_method ('CARD', 'ACCOUNT', 'CASH', etc.) │
+│ - amount, payment_date │
+│ - card_id (FK, if payment_method = 'CARD') │
+│ - account_id (FK, if payment_method = 'ACCOUNT') │
+│ │
+│ Backend Processing: │
+│ 1. Validate order_id, card_id (if provided), │
+│ account_id (if provided) exist │
+│ 2. Generate payment_id from seq_payment_id │
+│ 3. INSERT INTO payment │
+│ 4. IF account_id provided: │
+│ a. Get account.current_balance │
+│ b. Calculate: newBalance = current_balance - amount │
+│ (Payments REDUCE debt, so subtract) │
+│ c. UPDATE account.current_balance = newBalance │
+│ (No credit limit check - payments always allowed) │
+│ 5. Return created payment with order/account/card details │
+└─────────────────────────────────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 4: Create Shipment (if channel = 'ONLINE') │
+├─────────────────────────────────────────────────────────────┤
+│ Frontend: POST /api/shipments │
+│ - order_id (FK to order_header) │
+│ - shipper_id (FK to shipper) │
+│ - tracking_number, ship_date, delivery_date │
+│ - shipping_address │
+│ │
+│ Backend Processing: │
+│ 1. Validate order_id and shipper_id exist │
+│ 2. Generate shipment_id from seq_shipment_id │
+│ 3. INSERT INTO shipment │
+│ 4. Return created shipment with order/shipper details │
+└─────────────────────────────────────────────────────────────┘
+---## Technical Interactions & Data Flow### Account Balance Management
+┌─────────────────────────────────────────────────────────────┐
+│ AUTOMATIC ACCOUNT BALANCE UPDATES │
+├─────────────────────────────────────────────────────────────┤
+│ │
+│ 1. ORDER CREATION: │
+│ account.current_balance += order.total_amount │
+│ (Charges the account - increases debt) │
+│ │
+│ 2. ORDER LINE ADDED/UPDATED: │
+│ - Recalculate order.total_amount │
+│ - Calculate difference from old total │
+│ - account.current_balance += difference │
+│ │
+│ 3. ORDER LINE DELETED: │
+│ - Recalculate order.total_amount │
+│ - Calculate removed line total │
+│ - account.current_balance -= lineTotal │
+│ │
+│ 4. ORDER DELETED: │
+│ - account.current_balance -= order.total_amount │
+│ (Reverses the charge) │
+│ │
+│ 5. PAYMENT CREATED: │
+│ account.current_balance -= payment.amount │
+│ (Reduces debt - payments are credits) │
+│ │
+│ 6. PAYMENT DELETED: │
+│ account.current_balance += payment.amount │
+│ (Reverses the payment credit) │
+└─────────────────────────────────────────────────────────────┘
+### Order Total Calculation
+┌─────────────────────────────────────────────────────────────┐
+│ ORDER TOTAL AUTO-CALCULATION │
+├─────────────────────────────────────────────────────────────┤
+│ │
+│ Formula: │
+│ total_amount = SUM(quantity * unit_price - discount) │
+│ FROM order_line │
+│ WHERE order_id = ? │
+│ │
+│ Triggers: │
+│ - When order line is CREATED │
+│ - When order line is UPDATED │
+│ - When order line is DELETED │
+│ │
+│ Process: │
+│ 1. Calculate sum from all order_lines │
+│ 2. UPDATE order_header.total_amount │
+│ 3. If order has account_id: │
+│ - Update account balance accordingly │
+└─────────────────────────────────────────────────────────────┘
+### Credit Limit Validation
+┌─────────────────────────────────────────────────────────────┐
+│ CREDIT LIMIT ENFORCEMENT │
+├─────────────────────────────────────────────────────────────┤
+│ │
+│ Check Points: │
+│ 1. Order Creation (if account_id provided) │
+│ 2. Order Line Addition │
+│ 3. Order Line Update │
+│ │
+│ Validation Logic: │
+│ IF account.credit_limit IS NOT NULL: │
+│ newBalance = current_balance + orderAmount │
+│ IF newBalance > credit_limit: │
+│ - Rollback transaction │
+│ - Return 400 Bad Request │
+│ - Error: "Would exceed credit limit" │
+│ ELSE: │
+│ - Proceed with balance update │
+│ │
+│ Note: Payments do NOT check credit limit │
+│ (Payments reduce debt, so always allowed) │
+└────────────────────────

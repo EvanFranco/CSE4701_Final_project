@@ -85,3 +85,5 @@ export async function validatePaymentCard(cardId) {
   return result > 0;
 }
 
+
+

@@ -116,6 +116,24 @@ class ApiService {
 
   getShipments() { return this.getAll('shipments') }
   createShipment(shipment) { return this.create('shipments', shipment) }
+
+  getLocations() { return this.getAll('locations') }
+  getLocation(id) { return this.getById('locations', id) }
+  createLocation(location) { return this.create('locations', location) }
+  updateLocation(id, updates) { return this.update('locations', id, updates) }
+  deleteLocation(id) { return this.delete('locations', id) }
+
+  getPaymentCards() { return this.getAll('payment-cards') }
+  getPaymentCard(id) { return this.getById('payment-cards', id) }
+  getPaymentCardsByCustomer(customerId) { return this.request(`/payment-cards/customer/${customerId}`) }
+
+  getShippers() { return this.getAll('shippers') }
+  getShipper(id) { return this.getById('shippers', id) }
+  createShipper(shipper) { return this.create('shippers', shipper) }
+  updateShipper(id, updates) { return this.update('shippers', id, updates) }
+  deleteShipper(id) { return this.delete('shippers', id) }
+
+  getOnlineOrdersPendingShipment() { return this.request('/orders/online/pending-shipment') }
 }
 
 export default new ApiService()

@@ -5,6 +5,7 @@ import '../components/CommonStyles.css'
 export default function Inventory() {
   const [inventory, setInventory] = useState([])
   const [products, setProducts] = useState([])
+  const [locations, setLocations] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ export default function Inventory() {
   useEffect(() => {
     loadInventory()
     api.getProducts().then(setProducts)
+    api.getLocations().then(setLocations)
   }, [])
 
   const loadInventory = () => {
@@ -140,13 +142,19 @@ export default function Inventory() {
             </div>
             <form onSubmit={handleSubmit} className="form-container">
               <div className="form-group">
-                <label>Location ID *</label>
-                <input
-                  type="number"
+                <label>Location *</label>
+                <select
                   value={formData.location_id}
                   onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                   required
-                />
+                >
+                  <option value="">Select Location</option>
+                  {locations.map(l => (
+                    <option key={l.location_id} value={l.location_id}>
+                      {l.name} ({l.location_type})
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label>Product *</label>
